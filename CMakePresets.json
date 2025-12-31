@@ -1,0 +1,77 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "debug-clang",
+      "inherits": "base",
+      "displayName": "Debug (Clang)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "release-clang",
+      "inherits": "base",
+      "displayName": "Release (Clang)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+
+    {
+      "name": "debug-gcc",
+      "inherits": "base",
+      "displayName": "Debug (GCC)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "release-gcc",
+      "inherits": "base",
+      "displayName": "Release (GCC)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "debug-clang",
+      "configurePreset": "debug-clang"
+    },
+    {
+      "name": "release-clang",
+      "configurePreset": "release-clang"
+    },
+    {
+      "name": "debug-gcc",
+      "configurePreset": "debug-gcc"
+    },
+    {
+      "name": "release-gcc",
+      "configurePreset": "release-gcc"
+    }
+  ]
+}

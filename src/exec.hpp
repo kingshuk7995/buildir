@@ -58,6 +58,10 @@ public:
 
   inline std::size_t size() const noexcept { return m_node_store.size(); }
 
+  inline std::string get_first_target() const {
+    return m_names.empty() ? "" : m_names[0];
+  }
+
   inline bool is_phony(const NodeId id) const noexcept {
     return (m_phony.find(id) != m_phony.end());
   }

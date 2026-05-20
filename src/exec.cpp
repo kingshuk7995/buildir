@@ -22,22 +22,29 @@ Graph Graph::build(const parse::Result &parsed) {
     }
   }
 
-  const NodeId n = static_cast<NodeId>(parsed.rules.size());
+  // Second pass: inject implicit dependencies (source files without explicit rules)
+  for (const auto &rule : parsed.rules) {
+    for (const auto &dep : rule.deps) {
+      if (id_map.find(dep) == id_map.end()) {
+        NodeId new_id = static_cast<NodeId>(id_map.size());
+        id_map.emplace(dep, new_id);
+        names.push_back(dep);
+      }
+    }
+  }
+
+  const NodeId n = static_cast<NodeId>(id_map.size());
 
   std::vector<std::vector<NodeId>> adj(n), rev(n);
   std::vector<Node> nodes;
-  nodes.reserve(n);
+  nodes.resize(n);
 
   for (const auto &rule : parsed.rules) {
     const NodeId child = id_map.at(rule.name);
-    nodes.push_back(rule.commands);
+    nodes[child] = rule.commands;
 
     for (const auto &dep : rule.deps) {
-      auto it = id_map.find(dep);
-      if (it == id_map.end())
-        fatal("dependency not found");
-
-      const NodeId parent = it->second;
+      const NodeId parent = id_map.at(dep);
       adj[parent].push_back(child);
       rev[child].push_back(parent);
     }
@@ -207,6 +214,14 @@ void Scheduler::run(const Graph &graph, const std::string &start) {
 
     const std::string &target = *graph.get_name_ref(u);
 
+    // If it's a leaf node without commands (e.g. source file), and it doesn't exist -> fatal
+    if (graph.get_command_ref(u)->empty() && graph.get_parent_ids(u).empty()) {
+        if (!std::filesystem::exists(target)) {
+            fatal(std::format("No rule to make target '{}'", target).c_str());
+        }
+        return false;
+    }
+
     // target does not exist → must execute
     if (!std::filesystem::exists(target)) {
       return true;
@@ -238,8 +253,17 @@ void Scheduler::run(const Graph &graph, const std::string &start) {
 
       if (should_execute(u)) {
         const Node &node = *graph.get_command_ref(u);
-        pool.submit(u, node);
-        running++;
+        if (node.empty()) {
+          // Instant success for nodes without commands
+          for (NodeId v : graph.get_child_ids(u)) {
+            if (needed[v] && --indegree[v] == 0) {
+              ready.push(v);
+            }
+          }
+        } else {
+          pool.submit(u, node);
+          running++;
+        }
       } else {
         // skipped node → instant success
         for (NodeId v : graph.get_child_ids(u)) {

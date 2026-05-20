@@ -46,10 +46,13 @@ inline bool is_newer(const std::string &file, const std::string &wrt) {
   auto wtime = fs::last_write_time(wrt, ec2);
 
   if (ec2) {
-    fatal("dependency output missing (internal error)");
+    // If the target wrt is missing, technically we consider file is "newer" because wrt needs to be rebuilt.
+    return true; 
   }
 
   if (ec1) {
+    // If dependency file is missing, it cannot be newer. 
+    // The caller is responsible for verifying that required dependencies actually exist.
     return false;
   }
 

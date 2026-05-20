@@ -6,9 +6,12 @@
 #include <cstring>
 #include <iostream>
 #include <signal.h>
+#include <spawn.h>
 #include <sys/select.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+extern char **environ;
 
 namespace exec {
 
@@ -40,7 +43,21 @@ void ProcessPool::worker_loop(int read_fd, int write_fd) {
       std::string cmd(len, '\0');
       read(read_fd, cmd.data(), len);
 
-      rc = std::system(cmd.c_str());
+      pid_t child_pid;
+      char *spawn_argv[] = {const_cast<char*>("sh"), const_cast<char*>("-c"), const_cast<char*>(cmd.c_str()), nullptr};
+      
+      if (posix_spawn(&child_pid, "/bin/sh", nullptr, nullptr, spawn_argv, environ) == 0) {
+        int status;
+        waitpid(child_pid, &status, 0);
+        if (WIFEXITED(status)) {
+          rc = WEXITSTATUS(status);
+        } else {
+          rc = 1;
+        }
+      } else {
+        rc = 1;
+      }
+
       if (rc != 0)
         break;
     }
@@ -105,7 +122,7 @@ void ProcessPool::submit(NodeId id, const Node &commands) {
       write(w.to_child, &msg, sizeof(msg));
 
       for (const auto &cmd : commands) {
-        uint32_t len = cmd.size();
+        uint32_t len = static_cast<uint32_t>(cmd.size());
         write(w.to_child, &len, sizeof(len));
         write(w.to_child, cmd.data(), len);
       }

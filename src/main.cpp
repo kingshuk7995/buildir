@@ -41,6 +41,10 @@ int main(int argc, char *argv[]) {
     }
   }();
 
+  if (task == exec::default_cmd) {
+    task = g.get_first_target();
+  }
+
   exec::Scheduler s(njobs);
   s.start_pool();
 
